@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Kam Code Generator</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  background: #0a0a0a;
+  color: #fff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.container {
+  width: 420px;
+}
+
+.card {
+  background: #141414;
+  padding: 22px;
+  border-radius: 14px;
+  margin-bottom: 16px;
+  box-shadow: 0 0 25px rgba(0,0,0,0.7);
+}
+
+h2 {
+  text-align: center;
+  margin-bottom: 15px;
+  font-weight: 600;
+}
+
+label {
+  font-size: 12px;
+  opacity: 0.6;
+}
+
+input {
+  width: 100%;
+  padding: 10px;
+  margin-top: 6px;
+  margin-bottom: 12px;
+  background: #1c1c1c;
+  border: 1px solid #333;
+  color: #fff;
+  border-radius: 6px;
+  outline: none;
+}
+
+input:focus {
+  border-color: #4cafef;
+}
+
+button {
+  width: 100%;
+  padding: 10px;
+  background: #4cafef;
+  border: none;
+  color: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+button:hover {
+  background: #389de0;
+}
+
+.secondary {
+  background: #2e7d32;
+}
+
+.secondary:hover {
+  background: #256628;
+}
+
+.code {
+  font-size: 38px;
+  text-align: center;
+  letter-spacing: 5px;
+  margin: 12px 0;
+}
+
+.small {
+  font-size: 13px;
+  opacity: 0.7;
+  text-align: center;
+}
+
+.progress {
+  height: 6px;
+  background: #222;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 10px;
+}
+
+.bar {
+  height: 100%;
+  width: 0%;
+  background: #4cafef;
+  transition: width 0.5s linear;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+}
+
+.hidden { display: none; }
+
+.status {
+  text-align: center;
+  font-size: 13px;
+  margin-top: 8px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<!-- LOGIN -->
+<div class="card">
+  <h2>Kam Code Generator</h2>
+
+  <input id="password" type="password" placeholder="Password">
+
+  <button onclick="unlock()">Unlock</button>
+  <button onclick="hint()">Hint</button>
+
+  <div id="status" class="status"></div>
+</div>
+
+<!-- MAIN APP -->
+<div id="main" class="hidden">
+
+<div class="card">
+  <label>Shared Secret</label>
+  <input id="secret">
+</div>
+
+<div class="card">
+  <label>Select Time (Today)</label>
+  <input id="timeOnly" type="time">
+
+  <button onclick="applyTime()">Apply Time</button>
+  <button class="secondary" onclick="resetTime()">Reset to Now</button>
+
+  <div class="small">Unix: <span id="unix"></span></div>
+</div>
+
+<div class="card">
+  <div id="code" class="code">------</div>
+
+  <button onclick="copyCode()">Copy Code</button>
+
+  <div class="small">Remaining: <span id="remaining"></span></div>
+
+  <div class="progress">
+    <div id="bar" class="bar"></div>
+  </div>
+</div>
+
+</div>
+</div>
+
+<script>
+const VALIDITY = 3600;
+let time = Math.floor(Date.now()/1000);
+
+// 🔐 Unlock
+function unlock() {
+  const p = document.getElementById("password").value.toLowerCase();
+
+  if (p === "kamikaze22" || p === "strayindex") {
+    document.getElementById("main").classList.remove("hidden");
+    document.getElementById("secret").value =
+      "AIfVJHJmJxBL370G1blAfQ4yB9Cw3i+6EiA+mCzHMZrjCYsc";
+
+    setStatus("Access granted", "#4caf50");
+  } else {
+    setStatus("Wrong password", "#ff5252");
+  }
+}
+
+function hint() {
+  setStatus("Hint: Your username", "#aaa");
+}
+
+function setStatus(text, color) {
+  const el = document.getElementById("status");
+  el.textContent = text;
+  el.style.color = color;
+}
+
+// ⏱ Time controls
+function applyTime() {
+  const val = document.getElementById("timeOnly").value;
+  if (!val) return;
+
+  const d = new Date();
+  const [h, m] = val.split(":");
+
+  d.setHours(h, m, 0);
+  time = Math.floor(d.getTime()/1000);
+}
+
+function resetTime() {
+  time = Math.floor(Date.now()/1000);
+  document.getElementById("timeOnly").value = "";
+}
+
+// 🔐 Crypto
+async function hmacSha1(key, msg) {
+  const enc = new TextEncoder();
+  const keyObj = await crypto.subtle.importKey(
+    "raw", enc.encode(key),
+    { name: "HMAC", hash: "SHA-1" },
+    false, ["sign"]
+  );
+  return new Uint8Array(await crypto.subtle.sign("HMAC", keyObj, msg));
+}
+
+function toBytes(n) {
+  const buf = new ArrayBuffer(8);
+  new DataView(buf).setBigUint64(0, BigInt(n), false);
+  return new Uint8Array(buf);
+}
+
+async function generate(secret, t) {
+  const interval = Math.floor((t * 1000) / 3600000);
+  const val = Math.floor((interval * 3600000) / 60000);
+
+  const d = await hmacSha1(secret, toBytes(val));
+  const o = d[d.length - 1] & 0xf;
+
+  let r =
+    ((d[o] & 0x7f) << 24) |
+    (d[o+1] << 16) |
+    (d[o+2] << 8) |
+    (d[o+3]);
+
+  return (r & 0x7fffffff) % 1000000;
+}
+
+// ⏳ Helpers
+function remaining(t) {
+  return VALIDITY - (t % VALIDITY);
+}
+
+function format(sec) {
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+// 📋 Copy
+function copyCode() {
+  const text = document.getElementById("code").textContent;
+  navigator.clipboard.writeText(text);
+
+  setStatus("Copied ✓", "#4caf50");
+  setTimeout(()=>setStatus("", "#aaa"), 1500);
+}
+
+// 🔁 Main Loop
+setInterval(async () => {
+
+  time++;
+
+  document.getElementById("unix").textContent = time;
+
+  const secret = document.getElementById("secret").value;
+
+  const code = await generate(secret, time);
+  document.getElementById("code").textContent =
+    code.toString().padStart(6, "0");
+
+  const r = remaining(time);
+
+  document.getElementById("remaining").textContent = format(r);
+
+  document.getElementById("bar").style.width =
+    ((VALIDITY - r) / VALIDITY * 100) + "%";
+
+}, 1000);
+</script>
+
+</body>
+</html>
