@@ -2,35 +2,54 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+
+<!-- ✅ CRITICAL FIX (stops zoom issue) -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>Kam Code Generator</title>
 
 <style>
+:root {
+  --bg: #0a0a0a;
+  --card: #141414;
+  --accent: #4cafef;
+  --accent-dark: #389de0;
+}
+
+/* Layout */
 body {
   margin: 0;
   font-family: "Segoe UI", system-ui, sans-serif;
-  background: #0a0a0a;
-  color: #fff;
+  background: var(--bg);
+  color: white;
+
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh;
+  min-height: 100vh;
 }
 
+/* Container */
 .container {
-  width: 420px;
+  width: 100%;
+  max-width: 420px;
+  padding: 15px;
+  box-sizing: border-box;
 }
 
+/* Cards */
 .card {
-  background: #141414;
-  padding: 22px;
+  background: var(--card);
+  padding: 20px;
   border-radius: 14px;
-  margin-bottom: 16px;
-  box-shadow: 0 0 25px rgba(0,0,0,0.7);
+  margin-bottom: 14px;
+  box-shadow: 0 0 30px rgba(0,0,0,0.6);
 }
 
+/* Typography */
 h2 {
   text-align: center;
-  margin-bottom: 15px;
+  margin: 0 0 14px;
   font-weight: 600;
 }
 
@@ -39,35 +58,36 @@ label {
   opacity: 0.6;
 }
 
+/* Inputs */
 input {
   width: 100%;
-  padding: 10px;
-  margin-top: 6px;
-  margin-bottom: 12px;
+  padding: 11px;
+  margin: 6px 0 12px;
   background: #1c1c1c;
   border: 1px solid #333;
-  color: #fff;
+  color: white;
   border-radius: 6px;
-  outline: none;
 }
 
 input:focus {
-  border-color: #4cafef;
+  border-color: var(--accent);
+  outline: none;
 }
 
+/* Buttons */
 button {
   width: 100%;
-  padding: 10px;
-  background: #4cafef;
+  padding: 11px;
+  margin-top: 6px;
+  background: var(--accent);
   border: none;
-  color: #fff;
+  color: white;
   border-radius: 6px;
   cursor: pointer;
-  font-weight: 500;
 }
 
 button:hover {
-  background: #389de0;
+  background: var(--accent-dark);
 }
 
 .secondary {
@@ -78,19 +98,27 @@ button:hover {
   background: #256628;
 }
 
-.code {
-  font-size: 38px;
-  text-align: center;
-  letter-spacing: 5px;
-  margin: 12px 0;
+.row {
+  display: flex;
+  gap: 8px;
 }
 
+/* Code Display */
+.code {
+  font-size: clamp(28px, 6vw, 40px);
+  text-align: center;
+  letter-spacing: 5px;
+  margin: 10px 0;
+}
+
+/* Info text */
 .small {
   font-size: 13px;
   opacity: 0.7;
   text-align: center;
 }
 
+/* Progress bar */
 .progress {
   height: 6px;
   background: #222;
@@ -102,21 +130,38 @@ button:hover {
 .bar {
   height: 100%;
   width: 0%;
-  background: #4cafef;
+  background: var(--accent);
   transition: width 0.5s linear;
 }
 
-.row {
-  display: flex;
-  gap: 8px;
-}
-
-.hidden { display: none; }
-
+/* Status */
 .status {
   text-align: center;
   font-size: 13px;
   margin-top: 8px;
+}
+
+.hidden { display: none; }
+
+/* ✅ MOBILE SPECIFIC TUNING */
+@media (max-width: 480px) {
+
+  body {
+    align-items: flex-start;
+  }
+
+  .container {
+    padding: 10px;
+  }
+
+  .card {
+    padding: 16px;
+    border-radius: 10px;
+  }
+
+  button {
+    padding: 13px;
+  }
 }
 </style>
 </head>
@@ -137,7 +182,7 @@ button:hover {
   <div id="status" class="status"></div>
 </div>
 
-<!-- MAIN APP -->
+<!-- MAIN -->
 <div id="main" class="hidden">
 
 <div class="card">
@@ -149,8 +194,10 @@ button:hover {
   <label>Select Time (Today)</label>
   <input id="timeOnly" type="time">
 
-  <button onclick="applyTime()">Apply Time</button>
-  <button class="secondary" onclick="resetTime()">Reset to Now</button>
+  <div class="row">
+    <button onclick="applyTime()">Apply</button>
+    <button class="secondary" onclick="resetTime()">Now</button>
+  </div>
 
   <div class="small">Unix: <span id="unix"></span></div>
 </div>
@@ -160,7 +207,9 @@ button:hover {
 
   <button onclick="copyCode()">Copy Code</button>
 
-  <div class="small">Remaining: <span id="remaining"></span></div>
+  <div class="small">
+    Remaining: <span id="remaining"></span>
+  </div>
 
   <div class="progress">
     <div id="bar" class="bar"></div>
@@ -174,12 +223,13 @@ button:hover {
 const VALIDITY = 3600;
 let time = Math.floor(Date.now()/1000);
 
-// 🔐 Unlock
+// Unlock
 function unlock() {
   const p = document.getElementById("password").value.toLowerCase();
 
   if (p === "kamikaze22" || p === "strayindex") {
     document.getElementById("main").classList.remove("hidden");
+
     document.getElementById("secret").value =
       "AIfVJHJmJxBL370G1blAfQ4yB9Cw3i+6EiA+mCzHMZrjCYsc";
 
@@ -199,7 +249,7 @@ function setStatus(text, color) {
   el.style.color = color;
 }
 
-// ⏱ Time controls
+// Time
 function applyTime() {
   const val = document.getElementById("timeOnly").value;
   if (!val) return;
@@ -216,7 +266,7 @@ function resetTime() {
   document.getElementById("timeOnly").value = "";
 }
 
-// 🔐 Crypto
+// Crypto
 async function hmacSha1(key, msg) {
   const enc = new TextEncoder();
   const keyObj = await crypto.subtle.importKey(
@@ -249,7 +299,7 @@ async function generate(secret, t) {
   return (r & 0x7fffffff) % 1000000;
 }
 
-// ⏳ Helpers
+// Helpers
 function remaining(t) {
   return VALIDITY - (t % VALIDITY);
 }
@@ -257,10 +307,10 @@ function remaining(t) {
 function format(sec) {
   const m = Math.floor(sec / 60);
   const s = sec % 60;
-  return `${m}:${s.toString().padStart(2, "0")}`;
+  return `${m}:${s.toString().padStart(2,"0")}`;
 }
 
-// 📋 Copy
+// Copy
 function copyCode() {
   const text = document.getElementById("code").textContent;
   navigator.clipboard.writeText(text);
@@ -269,7 +319,7 @@ function copyCode() {
   setTimeout(()=>setStatus("", "#aaa"), 1500);
 }
 
-// 🔁 Main Loop
+// Loop
 setInterval(async () => {
 
   time++;
@@ -279,12 +329,14 @@ setInterval(async () => {
   const secret = document.getElementById("secret").value;
 
   const code = await generate(secret, time);
+
   document.getElementById("code").textContent =
-    code.toString().padStart(6, "0");
+    code.toString().padStart(6,"0");
 
   const r = remaining(time);
 
-  document.getElementById("remaining").textContent = format(r);
+  document.getElementById("remaining").textContent =
+    format(r);
 
   document.getElementById("bar").style.width =
     ((VALIDITY - r) / VALIDITY * 100) + "%";
